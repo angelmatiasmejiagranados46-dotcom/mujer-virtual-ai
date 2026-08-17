@@ -146,7 +146,15 @@
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
-
+// Cargador del modelo 3D
+    const loader = new THREE.GLTFLoader();
+    loader.load('avatar.glb', (gltf) => {
+      const model = gltf.scene;
+      model.position.set(0, -1, 0); // Ajusta la altura del personaje
+      scene.add(model);
+    }, undefined, (error) => {
+      console.error('Error al cargar el avatar:', error);
+    });
     // Bucle de animación
     function renderLoop() {
       requestAnimationFrame(renderLoop);
