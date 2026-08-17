@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mujer Virtual AI</title>
   
-  <!-- Carga de Three.js y GLTFLoader -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
@@ -104,10 +103,8 @@
   </div>
 
   <script>
-    // Clave protegida en Base64 para evitar bloqueos
     const GROQ_KEY_B64 = "Z3NrX1BmM1l6aFZYNVR0ZXB3OTdGVmpGV0dkeWIzRllXTTAyZjlqM3NpMFZhd09jYzJwMG53WFA=";
 
-    // 1. ESCENA 3D Y CÁMARA
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
 
@@ -119,7 +116,6 @@
     renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
 
-    // 2. ILUMINACIÓN
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
     scene.add(ambientLight);
 
@@ -127,7 +123,6 @@
     dirLight.position.set(2, 4, 3);
     scene.add(dirLight);
 
-    // 3. PISO Y PLATAFORMA
     const floorY = -1.6;
 
     const floorCenterGeo = new THREE.CircleGeometry(1.5, 64);
@@ -141,7 +136,6 @@
     gridHelper.position.y = floorY - 0.01;
     scene.add(gridHelper);
 
-    // 4. AVATAR
     const avatarGroup = new THREE.Group();
     scene.add(avatarGroup);
 
@@ -164,12 +158,10 @@
       const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
       const mouthMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
 
-      // Cabeza
       headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.18, 32, 32), skinMat);
       headMesh.position.y = 0.75;
       avatarGroup.add(headMesh);
 
-      // Ojos y Boca
       const eyeGeo = new THREE.SphereGeometry(0.02, 16, 16);
       const eyeLeft = new THREE.Mesh(eyeGeo, eyeMat);
       eyeLeft.position.set(-0.06, 0.78, 0.16);
@@ -185,7 +177,6 @@
       mouth.rotation.x = Math.PI;
       avatarGroup.add(mouth);
 
-      // Cabello
       const hairTop = new THREE.Mesh(new THREE.SphereGeometry(0.20, 32, 32), hairMat);
       hairTop.position.set(0, 0.78, -0.02);
       avatarGroup.add(hairTop);
@@ -194,7 +185,6 @@
       hairBack.position.set(0, 0.55, -0.08);
       avatarGroup.add(hairBack);
 
-      // Cuerpo / Vestido
       const top = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.09, 0.35, 32), dressMat);
       top.position.y = 0.4;
       avatarGroup.add(top);
@@ -203,7 +193,6 @@
       skirt.position.y = -0.05;
       avatarGroup.add(skirt);
 
-      // Extremidades
       armLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.025, 0.55), skinMat);
       armLeft.position.set(-0.19, 0.3, 0);
       armLeft.rotation.z = 0.15;
@@ -226,7 +215,6 @@
       avatarGroup.position.y = -0.4;
     }
 
-    // 5. ANIMACIÓN
     let clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
@@ -256,7 +244,6 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // 6. PROCESAMIENTO DE IA
     const micBtn = document.getElementById('mic-btn');
     const statusText = document.getElementById('status-text');
 
@@ -308,36 +295,57 @@
     }
 
     async function askAI(userPrompt) {
-  try {
-    const realApiKey = atob(GROQ_KEY_B64).trim();
+      try {
+        const realApiKey = atob(GROQ_KEY_B64).trim();
 
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${realApiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: "Eres una asistente virtual amable, inteligente y concisa. Responde siempre en español en menos de 2 oraciones." },
-          { role: "user", content: userPrompt }
-        ]
-      })
-    });
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${realApiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: "Eres una asistente virtual amable, inteligente y concisa. Responde siempre en español en menos de 2 oraciones." },
+              { role: "user", content: userPrompt }
+            ]
+          })
+        });
 
-    const data = await res.json();
-    console.log("Respuesta de Groq:", data);
+        const data = await res.json();
+        console.log("Respuesta de Groq:", data);
 
-    if (data.choices && data.choices[0]) {
-      const aiResponse = data.choices[0].message.content;
-      speak(aiResponse);
-    } else {
-      console.error("Detalle del error devuelto por Groq:", data);
-      speak("Ocurrió un inconveniente al obtener la respuesta.");
+        if (data.choices && data.choices[0]) {
+          const aiResponse = data.choices[0].message.content;
+          speak(aiResponse);
+        } else {
+          console.error("Detalle del error devuelto por Groq:", data);
+          speak("Ocurrió un inconveniente al obtener la respuesta.");
+        }
+      } catch (error) {
+        console.error("Error en la petición:", error);
+        speak("Error de conexión al procesar la respuesta.");
+      }
     }
-  } catch (error) {
-    console.error("Error en la petición:", error);
-    speak("Error de conexión al procesar la respuesta.");
-  }
-}
+
+    function speak(text) {
+      statusText.innerText = "Hablando...";
+      isSpeaking = true;
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'es-ES';
+      utterance.rate = 1.0;
+      utterance.pitch = 1.2;
+
+      utterance.onend = () => {
+        statusText.innerText = "Presiona el micrófono para hablar";
+        isSpeaking = false;
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+  </script>
+</body>
+</html>
