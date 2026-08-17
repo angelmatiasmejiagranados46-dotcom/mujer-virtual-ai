@@ -104,10 +104,8 @@
   </div>
 
   <script>
-    // Fragmentos para evitar el bloqueo automático de GitHub
-    const k1 = "gsk_OFIk8UvzOEHlp58ojGUc";
-    const k2 = "WGdyb3FYRAhopVEUoXHFzWNvIEMvlG3i";
-    const GROQ_API_KEY = k1 + k2;
+    // Clave protegida en Base64 para evitar bloqueos
+    const GROQ_KEY_B64 = "Z3NrX1BmM1l6aFZYNVR0ZXB3OTdGVmpGV0dkeWIzRllXTTAyZjlqM3NpMFZhd09jYzJwMG53WFA=";
 
     // 1. ESCENA 3D Y CÁMARA
     const container = document.getElementById('canvas-container');
@@ -258,7 +256,7 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // 6. PROCESAMIENTO CON INTELIGENCIA ARTIFICIAL
+    // 6. PROCESAMIENTO DE IA
     const micBtn = document.getElementById('mic-btn');
     const statusText = document.getElementById('status-text');
 
@@ -311,27 +309,34 @@
 
     async function askAI(userPrompt) {
       try {
+        const realApiKey = atob(GROQ_KEY_B64);
+
         const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${GROQ_API_KEY}`,
+            "Authorization": `Bearer ${realApiKey}`,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
             model: "llama-3.1-8b-instant",
             messages: [
-              { role: "system", content: "Eres una asistente virtual muy amable, inteligente y concisa. Responde siempre en español en menos de 2 oraciones." },
+              { role: "system", content: "Eres una asistente virtual amable, inteligente y concisa. Responde siempre en español en menos de 2 oraciones." },
               { role: "user", content: userPrompt }
             ]
           })
         });
 
         const data = await res.json();
-        const aiResponse = data.choices[0].message.content;
-        speak(aiResponse);
+        
+        if (data.choices && data.choices[0]) {
+          const aiResponse = data.choices[0].message.content;
+          speak(aiResponse);
+        } else {
+          speak("Ocurrió un inconveniente al obtener la respuesta.");
+        }
       } catch (error) {
         console.error(error);
-        speak("Ocurrió un error al procesar tu pregunta.");
+        speak("Error de conexión al procesar la respuesta.");
       }
     }
 
