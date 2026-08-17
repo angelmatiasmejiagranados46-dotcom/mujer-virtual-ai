@@ -20,7 +20,6 @@
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      /* Fondo elegante con degradado central */
       background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #020617 100%);
       display: flex;
       justify-content: center;
@@ -37,7 +36,6 @@
       z-index: 1;
     }
 
-    /* Controles de voz flotantes */
     .voice-ui {
       position: absolute;
       bottom: 30px;
@@ -98,21 +96,18 @@
 </head>
 <body>
 
-  <!-- Contenedor del escenario 3D -->
   <div id="canvas-container"></div>
 
-  <!-- Botón e interfaz de voz -->
   <div class="voice-ui">
-    <button id="mic-btn" class="mic-btn" title="Presiona para hablar">🎤</button>
-    <div id="status-text" class="status-text">Presiona el micrófono para hablar</div>
+    <button id="mic-btn" class="mic-btn" title="Haz clic para activar y hablar">🎤</button>
+    <div id="status-text" class="status-text">Haz clic en la pantalla o en el micrófono para hablar</div>
   </div>
 
   <script>
-    // 1. Crear Escena y Renderizador
+    // 1. Escena y Renderizador 3D
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
 
-    // 2. Cámara acercada (distancia 2.5m) para ver al avatar MUCHO MÁS GRANDE
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 0.1, 2.5);
 
@@ -121,7 +116,7 @@
     renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
 
-    // 3. Luces
+    // 2. Luces
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
     scene.add(ambientLight);
 
@@ -129,7 +124,7 @@
     dirLight.position.set(2, 4, 3);
     scene.add(dirLight);
 
-    // 4. Base circular en el suelo
+    // Base circular
     const floorGeo = new THREE.CircleGeometry(1.2, 32);
     const floorMat = new THREE.MeshBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.25 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -137,15 +132,13 @@
     floor.position.y = -1.1;
     scene.add(floor);
 
-    // 5. Grupo del Avatar
+    // 3. Avatar
     const avatarGroup = new THREE.Group();
     scene.add(avatarGroup);
 
-    // Variables globales para extremidades y movimiento por voz
     let isSpeaking = false;
     let armLeft, armRight, headMesh;
 
-    // Intentar cargar 'avatar.glb' o mostrar figura femenina de respaldo
     const loader = new THREE.GLTFLoader();
     loader.load('avatar.glb', (gltf) => {
       const model = gltf.scene;
@@ -155,7 +148,6 @@
       createFemaleAvatar();
     });
 
-    // Construcción del Avatar Femenino con Rostro
     function createFemaleAvatar() {
       const dressMat = new THREE.MeshStandardMaterial({ color: 0xdb2777, roughness: 0.3 });
       const skinMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.4 });
@@ -163,14 +155,12 @@
       const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
       const mouthMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
 
-      // Cabeza
+      // Cabeza y Rostro
       headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.18, 32, 32), skinMat);
       headMesh.position.y = 0.75;
       avatarGroup.add(headMesh);
 
-      // --- ROSTRO (Ojos y Sonrisa) ---
       const eyeGeo = new THREE.SphereGeometry(0.02, 16, 16);
-      
       const eyeLeft = new THREE.Mesh(eyeGeo, eyeMat);
       eyeLeft.position.set(-0.06, 0.78, 0.16);
       avatarGroup.add(eyeLeft);
@@ -185,7 +175,7 @@
       mouth.rotation.x = Math.PI;
       avatarGroup.add(mouth);
 
-      // Cabello largo
+      // Cabello
       const hairTop = new THREE.Mesh(new THREE.SphereGeometry(0.20, 32, 32), hairMat);
       hairTop.position.set(0, 0.78, -0.02);
       avatarGroup.add(hairTop);
@@ -194,7 +184,7 @@
       hairBack.position.set(0, 0.55, -0.08);
       avatarGroup.add(hairBack);
 
-      // Torso / Vestido
+      // Cuerpo
       const top = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.09, 0.35, 32), dressMat);
       top.position.y = 0.4;
       avatarGroup.add(top);
@@ -203,7 +193,7 @@
       skirt.position.y = -0.05;
       avatarGroup.add(skirt);
 
-      // Brazos articulados
+      // Extremidades
       armLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.025, 0.55), skinMat);
       armLeft.position.set(-0.19, 0.3, 0);
       armLeft.rotation.z = 0.15;
@@ -214,7 +204,6 @@
       armRight.rotation.z = -0.15;
       avatarGroup.add(armRight);
 
-      // Piernas
       const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.025, 0.75), skinMat);
       legL.position.set(-0.08, -0.65, 0);
       avatarGroup.add(legL);
@@ -223,21 +212,18 @@
       legR.position.x = 0.08;
       avatarGroup.add(legR);
 
-      // Escalar la figura completa para hacerla mucho más grande
       avatarGroup.scale.set(1.45, 1.45, 1.45);
       avatarGroup.position.y = -0.1;
     }
 
-    // 6. Animación de renderizado y movimiento por voz
+    // 4. Bucle de Animación
     let clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
       const elapsedTime = clock.getElapsedTime();
 
-      // Respiración y flotación suave
       avatarGroup.position.y = Math.sin(elapsedTime * 1.5) * 0.03 - 0.1;
 
-      // Movimiento al hablar/interactuar
       if (isSpeaking) {
         avatarGroup.rotation.y = Math.sin(elapsedTime * 4) * 0.08;
         if (headMesh) headMesh.position.y = 0.75 + Math.sin(elapsedTime * 8) * 0.015;
@@ -254,30 +240,42 @@
     }
     animate();
 
-    // 7. Redimensionar pantalla
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // --- INTERACCIÓN DE VOZ COMPLETA ---
+    // 5. MÓDULO DE VOZ ROBUSTO CON INICIALIZACIÓN
     const micBtn = document.getElementById('mic-btn');
     const statusText = document.getElementById('status-text');
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      statusText.innerText = "Navegador no compatible. Usa Chrome o Edge.";
+      statusText.innerText = "Navegador no soporta micrófono. Usa Google Chrome o Edge.";
     } else {
       const recognition = new SpeechRecognition();
       recognition.lang = 'es-ES';
+      recognition.continuous = false;
+      recognition.interimResults = false;
 
       let isListening = false;
 
-      micBtn.addEventListener('click', () => {
-        if (!isListening) {
+      function startListening() {
+        try {
+          // Desbloqueo de voz por permisos de navegador
+          window.speechSynthesis.resume();
           recognition.start();
+        } catch(e) {
+          console.log(e);
+        }
+      }
+
+      micBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!isListening) {
+          startListening();
         } else {
           recognition.stop();
         }
@@ -286,7 +284,7 @@
       recognition.onstart = () => {
         isListening = true;
         micBtn.classList.add('active');
-        statusText.innerText = "Escuchando...";
+        statusText.innerText = "Te escucho... habla ahora.";
       };
 
       recognition.onresult = async (event) => {
@@ -295,8 +293,12 @@
         await processQuery(transcript);
       };
 
-      recognition.onerror = () => {
-        statusText.innerText = "Error. Inténtalo de nuevo.";
+      recognition.onerror = (e) => {
+        if (e.error === 'not-allowed') {
+          statusText.innerText = "Debes permitir el acceso al micrófono en el navegador.";
+        } else {
+          statusText.innerText = "No entendí, presiona de nuevo para hablar.";
+        }
         resetMic();
       };
 
