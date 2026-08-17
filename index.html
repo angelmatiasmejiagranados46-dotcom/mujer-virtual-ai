@@ -5,126 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mujer Virtual AI</title>
   
-  <!-- Librerías 3D necesarias -->
+  <!-- Carga de Three.js y GLTFLoader -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
   <style>
     * {
-      box-sizing: border-box;
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
 
     body {
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      /* Fondo elegante futurista con aura brillante en el centro */
+      /* Fondo elegante con degradado central */
       background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #020617 100%);
       display: flex;
       justify-content: center;
       align-items: center;
     }
 
-    /* Escenario principal */
     #canvas-container {
-      position: absolute;
-      top: 0;
-      left: 0;
       width: 100%;
       height: 100%;
-      z-index: 1;
-    }
-
-    /* Interfaz de voz flotante */
-    .voice-ui {
-      position: absolute;
-      bottom: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 15px;
-    }
-
-    /* Botón único de voz */
-    .mic-btn {
-      width: 85px;
-      height: 85px;
-      border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      background: linear-gradient(135deg, #6366f1, #4338ca);
-      color: #ffffff;
-      font-size: 36px;
-      cursor: pointer;
-      box-shadow: 0 0 35px rgba(99, 102, 241, 0.6);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      outline: none;
-    }
-
-    .mic-btn:hover {
-      transform: scale(1.1);
-      box-shadow: 0 0 50px rgba(99, 102, 241, 0.9);
-    }
-
-    .mic-btn.active {
-      background: linear-gradient(135deg, #ef4444, #b91c1c);
-      box-shadow: 0 0 50px rgba(239, 68, 68, 0.9);
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-      100% { transform: scale(1); }
-    }
-
-    .status-text {
-      font-size: 15px;
-      color: #e2e8f0;
-      background: rgba(15, 23, 42, 0.8);
-      padding: 8px 20px;
-      border-radius: 30px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      letter-spacing: 0.5px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
 
-  <!-- Visor 3D en pantalla completa -->
+  <!-- Contenedor del escenario 3D -->
   <div id="canvas-container"></div>
 
-  <!-- Interfaz de voz (único elemento visible) -->
-  <div class="voice-ui">
-    <button id="mic-btn" class="mic-btn" title="Haz clic para hablar">🎤</button>
-    <div id="status-text" class="status-text">Presiona el micrófono para hablar</div>
-  </div>
-
   <script>
-    // --- 1. CONFIGURACIÓN DEL ESCENARIO 3D ---
+    // 1. Crear Escena y Renderizador
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
 
-    // Cámara ajustada para mostrar un cuerpo completo centrado
+    // 2. Cámara enfocada en cuerpo completo (distancia de 3.8m)
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 0.2, 3.8); 
+    camera.position.set(0, 0.2, 3.8);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
 
-    // Iluminación ambiental y frontal
+    // 3. Luces
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambientLight);
 
@@ -132,7 +60,7 @@
     dirLight.position.set(2, 4, 3);
     scene.add(dirLight);
 
-    // Base reflectante bajo los pies del avatar
+    // 4. Base circular en el suelo
     const floorGeo = new THREE.CircleGeometry(1.2, 32);
     const floorMat = new THREE.MeshBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.25 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -140,34 +68,28 @@
     floor.position.y = -1.3;
     scene.add(floor);
 
-    let avatarGroup = new THREE.Group();
+    // 5. Grupo del Avatar
+    const avatarGroup = new THREE.Group();
     scene.add(avatarGroup);
 
-    // INTENTO DE CARGA DE MODELO GLB O MANIQUÍ 3D DE RESPALDO (Cuerpo Completo)
+    // Intentar cargar 'avatar.glb' o mostrar figura de respaldo
     const loader = new THREE.GLTFLoader();
     loader.load('avatar.glb', (gltf) => {
       const model = gltf.scene;
       model.position.set(0, -1.2, 0);
       avatarGroup.add(model);
-    }, undefined, (error) => {
-      // Si el archivo avatar.glb no existe aún, se construye un avatar de cuerpo completo con Three.js
-      createProceduralFullBodyAvatar();
-    });
-
-    function createProceduralFullBodyAvatar() {
+    }, undefined, () => {
+      // Figura 3D completa visible si no se encuentra avatar.glb
       const mat = new THREE.MeshStandardMaterial({ color: 0xc7d2fe, roughness: 0.3 });
       
-      // Cabeza
       const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), mat);
       head.position.y = 0.7;
       avatarGroup.add(head);
 
-      // Torso
       const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.12, 0.7, 32), mat);
       torso.position.y = 0.2;
       avatarGroup.add(torso);
 
-      // Brazos
       const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.6), mat);
       armL.position.set(-0.26, 0.2, 0);
       avatarGroup.add(armL);
@@ -176,7 +98,6 @@
       armR.position.x = 0.26;
       avatarGroup.add(armR);
 
-      // Piernas
       const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.8), mat);
       legL.position.set(-0.1, -0.55, 0);
       avatarGroup.add(legL);
@@ -186,137 +107,25 @@
       avatarGroup.add(legR);
 
       avatarGroup.position.y = -0.2;
-    }
+    });
 
-    // Bucle de animación (suave respiración y flotación)
+    // 6. Animación de renderizado
     let clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
       const elapsedTime = clock.getElapsedTime();
-      
-      // Movimiento natural leve para el avatar
-      avatarGroup.position.y = Math.sin(elapsedtiming = elapsedTime * 1.5) * 0.03 - 0.2;
+      avatarGroup.position.y = Math.sin(elapsedTime * 1.5) * 0.03 - 0.2;
       avatarGroup.rotation.y = Math.sin(elapsedTime * 0.5) * 0.05;
-
       renderer.render(scene, camera);
     }
     animate();
 
+    // 7. Redimensionar al cambiar tamaño de pantalla
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
-
-    // --- 2. SISTEMA DE CHAT INVISIBLE Y PROCESAMIENTO DE VOZ ---
-    const micBtn = document.getElementById('mic-btn');
-    const statusText = document.getElementById('status-text');
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      statusText.innerText = "Navegador no compatible con voz. Usa Chrome o Edge.";
-    } else {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'es-ES';
-      recognition.continuous = false;
-      recognition.interimResults = false;
-
-      let isListening = false;
-
-      micBtn.addEventListener('click', () => {
-        if (!isListening) {
-          recognition.start();
-        } else {
-          recognition.stop();
-        }
-      });
-
-      recognition.onstart = () => {
-        isListening = true;
-        micBtn.classList.add('active');
-        statusText.innerText = "Escuchando tu pregunta...";
-      };
-
-      recognition.onresult = async (event) => {
-        const transcript = event.results[0][0].transcript;
-        statusText.innerText = "Procesando...";
-        
-        // Enviar la pregunta capturada por voz al servidor invisible
-        await processQuery(transcript);
-      };
-
-      recognition.onerror = () => {
-        statusText.innerText = "Error al escuchar. Inténtalo de nuevo.";
-        resetMic();
-      };
-
-      recognition.onend = () => {
-        resetMic();
-      };
-
-      function resetMic() {
-        isListening = false;
-        micBtn.classList.remove('active');
-      }
-    }
-
-    // Procesador invisible de preguntas y llamadas al Backend / IA
-    async function processQuery(userText) {
-      try {
-        // Petición al endpoint backend chat.js
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'json' },
-          body: JSON.stringify({ message: userText })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const reply = data.reply || data.message || "Recibí tu mensaje correctamente.";
-          speak(reply);
-        } else {
-          // Respuesta de fallback nativa si no hay servidor activo
-          generateLocalReply(userText);
-        }
-      } catch (err) {
-        // Respuesta fallback de voz en cliente
-        generateLocalReply(userText);
-      }
-    }
-
-    // Sistema de respuesta con Inteligencia Local
-    function generateLocalReply(text) {
-      const lower = text.toLowerCase();
-      let response = "Te escucho perfectamente. ¿En qué más te puedo asistir?";
-
-      if (lower.includes("hola")) {
-        response = "¡Hola! Estoy lista para ayudarte. ¿Qué deseas saber?";
-      } else if (lower.includes("quién eres") || lower.includes("quien eres")) {
-        response = "Soy tu asistente de Inteligencia Artificial Virtual.";
-      } else if (lower.includes("cómo estás") || lower.includes("como estas")) {
-        response = "Estoy muy bien, funcionando al cien por ciento y lista para hablar contigo.";
-      }
-
-      speak(response);
-    }
-
-    // Síntesis de voz hablada (Respuesta auditiva)
-    function speak(text) {
-      statusText.innerText = "Hablando...";
-      window.speechSynthesis.cancel(); // Cancelar cualquier audio previo
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'es-ES';
-      utterance.rate = 1.0;
-      utterance.pitch = 1.1;
-
-      utterance.onend = () => {
-        statusText.innerText = "Presiona el micrófono para hablar";
-      };
-
-      window.speechSynthesis.speak(utterance);
-    }
   </script>
 </body>
 </html>
