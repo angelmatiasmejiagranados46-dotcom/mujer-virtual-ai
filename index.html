@@ -5,6 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mujer Virtual AI</title>
   <style>
+    /* Contenedor principal */
+.main-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Área del avatar en grande */
+#avatar-container {
+  flex: 1;
+  width: 100%;
+  height: calc(100vh - 80px);
+  background-color: #1a1a1a;
+}
+
+/* Barra inferior del chat minimalista */
+.chat-controls {
+  height: 80px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* Botón flotante del micrófono */
+.mic-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background-color: #2563eb;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.mic-button:hover {
+  background-color: #1d4ed8;
+  transform: scale(1.05);
+}
     * {
       box-sizing: border-box;
       margin: 0;
