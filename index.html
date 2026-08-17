@@ -100,11 +100,14 @@
 
   <div class="voice-ui">
     <button id="mic-btn" class="mic-btn" title="Haz clic para activar y hablar">🎤</button>
-    <div id="status-text" class="status-text">Haz clic en la pantalla o en el micrófono para hablar</div>
+    <div id="status-text" class="status-text">Presiona el micrófono para hablar</div>
   </div>
 
   <script>
-    // 1. Escena y Renderizador 3D
+    // --- 1. CONFIGURA AQUÍ TU CLAVE DE INTELIGENCIA ARTIFICIAL GROQ ---
+    const GROQ_API_KEY = "PEGA_AQUI_TU_API_KEY_DE_GROQ"; 
+
+    // --- 2. ESCENA 3D ---
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
 
@@ -116,7 +119,6 @@
     renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
 
-    // 2. Luces
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
     scene.add(ambientLight);
 
@@ -124,7 +126,6 @@
     dirLight.position.set(2, 4, 3);
     scene.add(dirLight);
 
-    // Base circular
     const floorGeo = new THREE.CircleGeometry(1.2, 32);
     const floorMat = new THREE.MeshBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.25 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -132,7 +133,6 @@
     floor.position.y = -1.1;
     scene.add(floor);
 
-    // 3. Avatar
     const avatarGroup = new THREE.Group();
     scene.add(avatarGroup);
 
@@ -155,7 +155,6 @@
       const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
       const mouthMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
 
-      // Cabeza y Rostro
       headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.18, 32, 32), skinMat);
       headMesh.position.y = 0.75;
       avatarGroup.add(headMesh);
@@ -175,7 +174,6 @@
       mouth.rotation.x = Math.PI;
       avatarGroup.add(mouth);
 
-      // Cabello
       const hairTop = new THREE.Mesh(new THREE.SphereGeometry(0.20, 32, 32), hairMat);
       hairTop.position.set(0, 0.78, -0.02);
       avatarGroup.add(hairTop);
@@ -184,7 +182,6 @@
       hairBack.position.set(0, 0.55, -0.08);
       avatarGroup.add(hairBack);
 
-      // Cuerpo
       const top = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.09, 0.35, 32), dressMat);
       top.position.y = 0.4;
       avatarGroup.add(top);
@@ -193,7 +190,6 @@
       skirt.position.y = -0.05;
       avatarGroup.add(skirt);
 
-      // Extremidades
       armLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.025, 0.55), skinMat);
       armLeft.position.set(-0.19, 0.3, 0);
       armLeft.rotation.z = 0.15;
@@ -216,7 +212,6 @@
       avatarGroup.position.y = -0.1;
     }
 
-    // 4. Bucle de Animación
     let clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
@@ -246,36 +241,25 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // 5. MÓDULO DE VOZ ROBUSTO CON INICIALIZACIÓN
+    // --- 3. PROCESAMIENTO CON CEREBRO DE INTELIGENCIA ARTIFICIAL ---
     const micBtn = document.getElementById('mic-btn');
     const statusText = document.getElementById('status-text');
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      statusText.innerText = "Navegador no soporta micrófono. Usa Google Chrome o Edge.";
+      statusText.innerText = "Navegador no soporta micrófono. Usa Chrome o Edge.";
     } else {
       const recognition = new SpeechRecognition();
       recognition.lang = 'es-ES';
-      recognition.continuous = false;
-      recognition.interimResults = false;
 
       let isListening = false;
-
-      function startListening() {
-        try {
-          // Desbloqueo de voz por permisos de navegador
-          window.speechSynthesis.resume();
-          recognition.start();
-        } catch(e) {
-          console.log(e);
-        }
-      }
 
       micBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (!isListening) {
-          startListening();
+          window.speechSynthesis.resume();
+          recognition.start();
         } else {
           recognition.stop();
         }
@@ -289,16 +273,12 @@
 
       recognition.onresult = async (event) => {
         const transcript = event.results[0][0].transcript;
-        statusText.innerText = "Procesando...";
-        await processQuery(transcript);
+        statusText.innerText = "Pensando respuesta...";
+        await askAI(transcript);
       };
 
-      recognition.onerror = (e) => {
-        if (e.error === 'not-allowed') {
-          statusText.innerText = "Debes permitir el acceso al micrófono en el navegador.";
-        } else {
-          statusText.innerText = "No entendí, presiona de nuevo para hablar.";
-        }
+      recognition.onerror = () => {
+        statusText.innerText = "No te entendí. Intenta de nuevo.";
         resetMic();
       };
 
@@ -312,34 +292,36 @@
       }
     }
 
-    async function processQuery(userText) {
+    // Consulta a la IA de Groq
+    async function askAI(userPrompt) {
+      if (!GROQ_API_KEY || GROQ_API_KEY === "PEGA_AQUI_TU_API_KEY_DE_GROQ") {
+        speak("Por favor agrega tu clave API de Groq en el código para activar mi cerebro.");
+        return;
+      }
+
       try {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: userText })
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-8b-instant",
+            messages: [
+              { role: "system", content: "Eres una asistente virtual muy amable, inteligente y concisa. Responde siempre en español en menos de 2 oraciones para que la voz no sea muy larga." },
+              { role: "user", content: userPrompt }
+            ]
+          })
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          speak(data.reply || data.message || "Te he escuchado.");
-        } else {
-          generateLocalReply(userText);
-        }
-      } catch (err) {
-        generateLocalReply(userText);
+        const data = await res.json();
+        const aiResponse = data.choices[0].message.content;
+        speak(aiResponse);
+      } catch (error) {
+        console.error(error);
+        speak("Ocurrió un error al procesar tu pregunta.");
       }
-    }
-
-    function generateLocalReply(text) {
-      const lower = text.toLowerCase();
-      let response = "Te escucho bien. ¿En qué puedo ayudarte?";
-
-      if (lower.includes("hola")) response = "¡Hola! Qué gusto hablar contigo.";
-      if (lower.includes("quién eres") || lower.includes("quien eres")) response = "Soy tu asistente virtual femenina.";
-      if (lower.includes("cómo estás") || lower.includes("como estas")) response = "Estoy muy bien, lista para ayudarte.";
-
-      speak(response);
     }
 
     function speak(text) {
