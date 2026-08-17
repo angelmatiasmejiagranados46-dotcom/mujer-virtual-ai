@@ -308,55 +308,36 @@
     }
 
     async function askAI(userPrompt) {
-      try {
-        const realApiKey = atob(GROQ_KEY_B64);
+  try {
+    const realApiKey = atob(GROQ_KEY_B64).trim();
 
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${realApiKey}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: "llama-3.1-8b-instant",
-            messages: [
-              { role: "system", content: "Eres una asistente virtual amable, inteligente y concisa. Responde siempre en español en menos de 2 oraciones." },
-              { role: "user", content: userPrompt }
-            ]
-          })
-        });
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${realApiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: "Eres una asistente virtual amable, inteligente y concisa. Responde siempre en español en menos de 2 oraciones." },
+          { role: "user", content: userPrompt }
+        ]
+      })
+    });
 
-        const data = await res.json();
-        
-        if (data.choices && data.choices[0]) {
-          const aiResponse = data.choices[0].message.content;
-          speak(aiResponse);
-        } else {
-          speak("Ocurrió un inconveniente al obtener la respuesta.");
-        }
-      } catch (error) {
-        console.error(error);
-        speak("Error de conexión al procesar la respuesta.");
-      }
+    const data = await res.json();
+    console.log("Respuesta de Groq:", data);
+
+    if (data.choices && data.choices[0]) {
+      const aiResponse = data.choices[0].message.content;
+      speak(aiResponse);
+    } else {
+      console.error("Detalle del error devuelto por Groq:", data);
+      speak("Ocurrió un inconveniente al obtener la respuesta.");
     }
-
-    function speak(text) {
-      statusText.innerText = "Hablando...";
-      isSpeaking = true;
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'es-ES';
-      utterance.rate = 1.0;
-      utterance.pitch = 1.2;
-
-      utterance.onend = () => {
-        statusText.innerText = "Presiona el micrófono para hablar";
-        isSpeaking = false;
-      };
-
-      window.speechSynthesis.speak(utterance);
-    }
-  </script>
-</body>
-</html>
+  } catch (error) {
+    console.error("Error en la petición:", error);
+    speak("Error de conexión al procesar la respuesta.");
+  }
+}
