@@ -72,8 +72,9 @@
     const avatarGroup = new THREE.Group();
     scene.add(avatarGroup);
 
-    // Variables globales para extremidades y movimiento
+    // Variables globales para extremidades, rostro y animación de saludo
     let isSpeaking = false;
+    let isWaving = false; // Control de saludo con la mano
     let armLeft, armRight, headMesh;
 
     // Intentar cargar 'avatar.glb' o mostrar figura de respaldo femenina
@@ -86,16 +87,36 @@
       createFemaleAvatar();
     });
 
-    // Construcción del Avatar Femenino de Cuerpo Completo de Respaldo
+    // Construcción del Avatar Femenino de Cuerpo Completo con Rostro
     function createFemaleAvatar() {
       const dressMat = new THREE.MeshStandardMaterial({ color: 0xdb2777, roughness: 0.3 });
       const skinMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.4 });
       const hairMat = new THREE.MeshStandardMaterial({ color: 0x312e81, roughness: 0.3 });
+      const faceDetailMat = new THREE.MeshBasicMaterial({ color: 0x1e1b4b }); // Color para los detalles del rostro
+      const mouthMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
 
       // Cabeza
       headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.18, 32, 32), skinMat);
       headMesh.position.y = 0.75;
       avatarGroup.add(headMesh);
+
+      // DETALLES DEL ROSTRO (Ojos y Sonrisa)
+      const eyeGeo = new THREE.SphereGeometry(0.02, 16, 16);
+      
+      const eyeLeft = new THREE.Mesh(eyeGeo, faceDetailMat);
+      eyeLeft.position.set(-0.06, 0.78, 0.16);
+      avatarGroup.add(eyeLeft);
+
+      const eyeRight = new THREE.Mesh(eyeGeo, faceDetailMat);
+      eyeRight.position.set(0.06, 0.78, 0.16);
+      avatarGroup.add(eyeRight);
+
+      // Sonrisa
+      const mouthGeo = new THREE.TorusGeometry(0.035, 0.008, 16, 100, Math.PI);
+      const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+      mouth.position.set(0, 0.71, 0.16);
+      mouth.rotation.x = Math.PI; // Orientación curva sonriente
+      avatarGroup.add(mouth);
 
       // Cabello largo
       const hairTop = new THREE.Mesh(new THREE.SphereGeometry(0.20, 32, 32), hairMat);
@@ -115,7 +136,7 @@
       skirt.position.y = -0.05;
       avatarGroup.add(skirt);
 
-      // Brazos articulados para gesticular
+      // Brazos articulados
       armLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.025, 0.55), skinMat);
       armLeft.position.set(-0.19, 0.3, 0);
       armLeft.rotation.z = 0.15;
@@ -138,7 +159,15 @@
       avatarGroup.position.y = -0.1;
     }
 
-    // 6. Animación de renderizado y movimiento por voz
+    // Función para activar el saludo con la mano
+    function triggerWaveHand() {
+      isWaving = true;
+      setTimeout(() => {
+        isWaving = false;
+      }, 3000); // Saluda durante 3 segundos
+    }
+
+    // 6. Animación de renderizado y movimiento por voz / saludo
     let clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
@@ -147,18 +176,31 @@
       // Respiración y flotación suave constante
       avatarGroup.position.y = Math.sin(elapsedTime * 1.5) * 0.03 - 0.2;
 
-      // Movimiento cuando gesticula al interactuar
-      if (isSpeaking) {
-        avatarGroup.r
-          ation.y = Math.sin(elapsedTime * 4) * 0.08;
+      if (isWaving && armRight) {
+        // Movimiento de saludo elevando y moviendo el brazo derecho
+        armRight.position.set(0.25, 0.5, 0);
+        armRight.rotation.z = -2.2; 
+        armRight.rotation.x = Math.sin(elapsedTime * 10) * 0.4; // Movimiento dinámico de la mano
+      } else if (isSpeaking) {
+        // Gesticulación al hablar
+        avatarGroup.rotation.y = Math.sin(elapsedTime * 4) * 0.08;
         if (headMesh) headMesh.position.y = 0.75 + Math.sin(elapsedTime * 8) * 0.015;
         if (armLeft) armLeft.rotation.x = Math.sin(elapsedTime * 5) * 0.2;
-        if (armRight) armRight.rotation.x = -Math.sin(elapsedTime * 5) * 0.2;
+        if (armRight) {
+          armRight.position.set(0.19, 0.3, 0);
+          armRight.rotation.z = -0.15;
+          armRight.rotation.x = -Math.sin(elapsedTime * 5) * 0.2;
+        }
       } else {
+        // Estado de reposo
         avatarGroup.rotation.y = Math.sin(elapsedTime * 0.5) * 0.05;
         if (headMesh) headMesh.position.y = 0.75;
         if (armLeft) armLeft.rotation.x = 0;
-        if (armRight) armRight.rotation.x = 0;
+        if (armRight) {
+          armRight.position.set(0.19, 0.3, 0);
+          armRight.rotation.z = -0.15;
+          armRight.rotation.x = 0;
+        }
       }
 
       renderer.render(scene, camera);
@@ -171,6 +213,26 @@
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
+
+    // --- RECONOCIMIENTO DE VOZ Y DETECCIÓN DE SALUDO ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'es-ES';
+
+      window.addEventListener('click', () => {
+        try { recognition.start(); } catch(e){}
+      });
+
+      recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript.toLowerCase();
+        
+        // Si detecta el saludo o pregunta por su estado, saluda con la mano
+        if (text.includes('hola') || text.includes('cómo estás') || text.includes('como estas')) {
+          triggerWaveHand();
+        }
+      };
+    }
   </script>
 </body>
 </html>
